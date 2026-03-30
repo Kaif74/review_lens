@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Review Lens</title>
+    <style>
+      :root {
+        --bg: #f6efe4;
+        --panel: rgba(255, 250, 242, 0.9);
+        --panel-strong: rgba(255, 252, 247, 0.96);
+        --ink: #1f2a1f;
+        --muted: #627162;
+        --accent: #cb5d35;
+        --accent-deep: #8a3e24;
+        --line: rgba(31, 42, 31, 0.12);
+        --positive: #2d6a4f;
+        --negative: #9f2d2d;
+        --mixed: #9b6b18;
+        --neutral: #52606d;
+        --shadow: 0 18px 60px rgba(78, 53, 34, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(203, 93, 53, 0.18), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(77, 114, 90, 0.2), transparent 26%),
+          linear-gradient(135deg, #f8f2ea 0%, #efe6d7 48%, #e4d9ca 100%);
+        min-height: 100vh;
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 44px;
+      }
+
+      .hero,
+      .card,
+      .results {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        padding: 32px;
+        margin-bottom: 24px;
+        background:
+          linear-gradient(135deg, rgba(255, 252, 247, 0.97), rgba(247, 238, 228, 0.9)),
+          var(--panel);
+      }
+
+      .eyebrow {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(203, 93, 53, 0.12);
+        color: var(--accent-deep);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 14px 0 12px;
+        font-size: clamp(2.5rem, 5vw, 4.8rem);
+        line-height: 0.94;
+        font-weight: 600;
+        max-width: 880px;
+      }
+
+      .hero-copy {
+        max-width: 860px;
+        color: var(--muted);
+        font-size: 1.08rem;
+        line-height: 1.58;
+      }
+
+      .hero-points {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .hero-point {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 42, 31, 0.1);
+        background: rgba(255, 255, 255, 0.58);
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+        gap: 24px;
+      }
+
+      .card,
+      .results {
+        padding: 22px;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 1.28rem;
+      }
+
+      .section-copy,
+      .field-hint,
+      .empty-state,
+      .meta,
+      .status {
+        color: var(--muted);
+      }
+
+      .section-copy {
+        margin: 0 0 16px;
+        line-height: 1.45;
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.95rem;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid rgba(31, 42, 31, 0.16);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.76);
+        color: var(--ink);
+        font: inherit;
+        padding: 12px 14px;
+      }
+
+      textarea {
+        min-height: 94px;
+        resize: vertical;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 12px;
+        border: 1px solid rgba(31, 42, 31, 0.12);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .toggle input {
+        width: auto;
+        margin: 0;
+      }
+
+      .field-hint {
+        margin-top: 6px;
+        font-size: 0.88rem;
+        line-height: 1.4;
+      }
+
+      .primary-zone {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 8px;
+      }
+
+      details.advanced {
+        border: 1px solid rgba(31, 42, 31, 0.1);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.42);
+        padding: 0 14px 14px;
+      }
+
+      details.advanced summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 14px 0;
+        font-weight: 600;
+      }
+
+      details.advanced summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        cursor: pointer;
+        transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        opacity: 0.72;
+        cursor: wait;
+      }
+
+      .primary {
+        background: var(--accent);
+        color: #fff8f3;
+      }
+
+      .secondary {
+        background: rgba(31, 42, 31, 0.08);
+        color: var(--ink);
+      }
+
+      .status {
+        min-height: 24px;
+        margin-bottom: 14px;
+        font-size: 0.95rem;
+      }
+
+      .progress-shell {
+        margin-bottom: 16px;
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(31, 42, 31, 0.08);
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent), #e18b53);
+        transition: width 220ms ease;
+      }
+
+      .summary-bar {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .summary-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .overall-card {
+        padding: 18px;
+        border: 1px solid rgba(31, 42, 31, 0.12);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.64);
+      }
+
+      .review-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .review-card {
+        padding: 18px;
+        border: 1px solid rgba(31, 42, 31, 0.12);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+        align-items: flex-start;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        text-transform: capitalize;
+      }
+
+      .chip.positive { background: rgba(45, 106, 79, 0.12); color: var(--positive); }
+      .chip.negative { background: rgba(159, 45, 45, 0.12); color: var(--negative); }
+      .chip.mixed { background: rgba(155, 107, 24, 0.12); color: var(--mixed); }
+      .chip.neutral { background: rgba(82, 96, 109, 0.12); color: var(--neutral); }
+
+      .points {
+        margin: 10px 0 0;
+        padding-left: 18px;
+      }
+
+      .points li {
+        margin-bottom: 6px;
+      }
+
+      .raw-review {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed rgba(31, 42, 31, 0.14);
+        white-space: pre-wrap;
+      }
+
+      .raw-review.collapsed {
+        display: -webkit-box;
+        -webkit-line-clamp: 6;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .inline-toggle {
+        margin-top: 10px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--accent-deep);
+        font-size: 0.92rem;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .error {
+        color: var(--negative);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      @media (max-width: 900px) {
+        .layout,
+        .split {
+          grid-template-columns: 1fr;
+        }
+
+        .shell {
+          width: min(100% - 20px, 1180px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <span class="eyebrow">Review Lens</span>
+        <h1>See what customers actually mean, faster.</h1>
+        <p class="hero-copy">
+          Paste an e-commerce product page, pull the reachable reviews, and turn the full review set into one
+          readable product-level summary with sentiment and key points.
+        </p>
+        <div class="hero-points">
+          <span class="hero-point">Scrape review pages</span>
+          <span class="hero-point">Summarize the product</span>
+          <span class="hero-point">Download JSON or CSV</span>
+        </div>
+      </section>
+
+      <section class="layout">
+        <form class="card" id="review-form">
+          <h2>Run Analysis</h2>
+          <p class="section-copy">
+            Paste a product URL and run. The app uses its configured defaults automatically, so you only need the extra settings when you want to override them.
+          </p>
+
+          <div class="form-grid">
+            <div class="primary-zone">
+              <div>
+                <label for="url">Product URL</label>
+                <input
+                  id="url"
+                  name="url"
+                  type="url"
+                  required
+                  value="https://www.bestbuy.com/site/reviews/apple-airpods-pro-2-wireless-active-noise-cancelling-earbuds-with-hearing-aid-feature-white/6447382"
+                />
+                <div class="field-hint">Use a public product page that exposes review markup in HTML or JSON-LD.</div>
+              </div>
+
+              <div class="toggle">
+                <input id="skip_llm" name="skip_llm" type="checkbox" />
+                <label for="skip_llm">Scrape only, without AI summaries</label>
+              </div>
+            </div>
+
+            <details class="advanced">
+              <summary>More options</summary>
+              <div class="form-grid">
+                <div class="split">
+                  <div>
+                    <label for="max_pages">Max review pages</label>
+                    <input id="max_pages" name="max_pages" type="number" min="1" value="{{ defaults.max_pages }}" />
+                  </div>
+                  <div>
+                    <label for="request_timeout">HTTP timeout</label>
+                    <input id="request_timeout" name="request_timeout" type="number" min="5" value="{{ defaults.request_timeout }}" />
+                  </div>
+                </div>
+
+                <div class="split">
+                  <div>
+                    <label for="model">Model</label>
+                    <input id="model" name="model" type="text" value="{{ defaults.model }}" />
+                  </div>
+                  <div>
+                    <label for="base_url">OpenAI-compatible base URL</label>
+                    <input id="base_url" name="base_url" type="url" value="{{ defaults.base_url }}" />
+                  </div>
+                </div>
+
+                <div class="split">
+                  <div>
+                    <label for="api_key_env">API key environment variable</label>
+                    <input id="api_key_env" name="api_key_env" type="text" value="{{ defaults.api_key_env }}" />
+                    <div class="field-hint">Only change this if your deployment uses a different env var name.</div>
+                  </div>
+                  <div>
+                    <label for="tokenizer_model">Tokenizer model</label>
+                    <input id="tokenizer_model" name="tokenizer_model" type="text" value="{{ defaults.tokenizer_model }}" />
+                  </div>
+                </div>
+
+                <div>
+                  <label for="extra_body_json">Provider-specific extra_body JSON</label>
+                  <textarea id="extra_body_json" name="extra_body_json">{{ defaults.extra_body_json }}</textarea>
+                </div>
+              </div>
+            </details>
+
+            <div class="actions">
+              <button class="primary" type="submit" id="submit-button">Analyze Reviews</button>
+              <button class="secondary hidden" type="button" id="download-json">Download JSON</button>
+              <button class="secondary hidden" type="button" id="download-csv">Download CSV</button>
+            </div>
+          </div>
+        </form>
+
+        <section class="results">
+          <h2>Results</h2>
+          <div class="status" id="status">Ready for a product URL.</div>
+          <div class="progress-shell hidden" id="progress-shell">
+            <div class="progress-track">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="meta" id="progress-meta"></div>
+          </div>
+          <div id="summary" class="summary-bar hidden"></div>
+          <div id="empty-state" class="empty-state">
+            Reviews will appear here after the request finishes.
+          </div>
+          <div id="review-list" class="review-list"></div>
+        </section>
+      </section>
+    </div>
+
+    <script>
+      const form = document.getElementById("review-form");
+      const statusNode = document.getElementById("status");
+      const summaryNode = document.getElementById("summary");
+      const emptyStateNode = document.getElementById("empty-state");
+      const reviewListNode = document.getElementById("review-list");
+      const submitButton = document.getElementById("submit-button");
+      const downloadJsonButton = document.getElementById("download-json");
+      const downloadCsvButton = document.getElementById("download-csv");
+      const progressShell = document.getElementById("progress-shell");
+      const progressFill = document.getElementById("progress-fill");
+      const progressMeta = document.getElementById("progress-meta");
+
+      let lastPayload = null;
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        reviewListNode.innerHTML = "";
+        summaryNode.classList.add("hidden");
+        emptyStateNode.classList.remove("hidden");
+        downloadJsonButton.classList.add("hidden");
+        downloadCsvButton.classList.add("hidden");
+        progressShell.classList.remove("hidden");
+        progressFill.style.width = "0%";
+        progressMeta.textContent = "Queued";
+        statusNode.classList.remove("error");
+        statusNode.textContent = "Starting analysis.";
+        submitButton.disabled = true;
+
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        payload.skip_llm = document.getElementById("skip_llm").checked;
+
+        try {
+          const response = await fetch("/api/reviews/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.error || "Request failed.");
+          }
+
+          const { job_id: jobId } = await response.json();
+          lastPayload = await pollJob(jobId);
+          renderResults(lastPayload);
+        } catch (error) {
+          statusNode.classList.add("error");
+          statusNode.textContent = error.message === "Failed to fetch"
+            ? "The app could not reach the local server. Check the terminal for a crash or restart the app."
+            : error.message;
+          emptyStateNode.classList.remove("hidden");
+          emptyStateNode.textContent = "The request did not complete. If the server stopped, restart it and try again.";
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      reviewListNode.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-review-toggle]");
+        if (!button) return;
+
+        const reviewId = button.getAttribute("data-review-toggle");
+        const body = document.getElementById(`review-body-${reviewId}`);
+        if (!body) return;
+
+        const isCollapsed = body.classList.toggle("collapsed");
+        button.textContent = isCollapsed ? "Read more" : "Show less";
+      });
+
+      downloadJsonButton.addEventListener("click", () => {
+        if (!lastPayload) return;
+        downloadBlob(
+          JSON.stringify(lastPayload, null, 2),
+          "reviews.json",
+          "application/json"
+        );
+      });
+
+      downloadCsvButton.addEventListener("click", async () => {
+        if (!lastPayload) return;
+        downloadBlob(reviewsToCsv(lastPayload.reviews || []), "reviews.csv", "text/csv");
+      });
+
+      function renderResults(payload) {
+        const reviews = payload.reviews || [];
+        const overallPoints = (payload.overall_key_points || [])
+          .filter(Boolean)
+          .map((point) => `<li>${escapeHtml(point)}</li>`)
+          .join("");
+        const overallSentiment = payload.overall_sentiment || "neutral";
+        const overallSummary = payload.overall_summary || "Overall AI summary not available for this product.";
+        const overallError = payload.overall_error
+          ? `<div class="meta error">${escapeHtml(payload.overall_error)}</div>`
+          : "";
+        statusNode.textContent = `Finished. ${payload.review_count} reviews processed.`;
+        progressShell.classList.add("hidden");
+        emptyStateNode.classList.add("hidden");
+        summaryNode.classList.remove("hidden");
+        summaryNode.innerHTML = `
+          <div class="summary-top">
+            <div>
+              <strong>${escapeHtml(payload.product_name || "Product review results")}</strong>
+              <div class="meta">${payload.review_count} review${payload.review_count === 1 ? "" : "s"}</div>
+            </div>
+            <div class="actions">
+              <button class="secondary" type="button" id="jump-top">Back to form</button>
+            </div>
+          </div>
+          <article class="overall-card">
+            <div class="card-head">
+              <div>
+                <strong>Overall product summary</strong>
+              </div>
+              <span class="chip ${escapeHtml(overallSentiment)}">${escapeHtml(overallSentiment)}</span>
+            </div>
+            <div>${escapeHtml(overallSummary)}</div>
+            ${overallPoints ? `<ul class="points">${overallPoints}</ul>` : ""}
+            ${overallError}
+          </article>
+        `;
+
+        document.getElementById("jump-top").addEventListener("click", () => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        reviewListNode.innerHTML = reviews.map(renderReviewCard).join("");
+        downloadJsonButton.classList.remove("hidden");
+        downloadCsvButton.classList.remove("hidden");
+      }
+
+      async function pollJob(jobId) {
+        while (true) {
+          const response = await fetch(`/api/reviews/progress/${jobId}`);
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || "Progress check failed.");
+          }
+
+          renderProgress(payload);
+
+          if (payload.status === "completed") {
+            return payload.result;
+          }
+
+          if (payload.status === "failed") {
+            throw new Error(payload.error || payload.message || "Request failed.");
+          }
+
+          await sleep(1000);
+        }
+      }
+
+      function renderProgress(payload) {
+        const progress = Number(payload.progress || 0);
+        progressShell.classList.remove("hidden");
+        progressFill.style.width = `${progress}%`;
+        statusNode.textContent = payload.message || "Working...";
+        if (payload.current && payload.total) {
+          progressMeta.textContent = `${payload.stage || "working"} | ${payload.current}/${payload.total} | ${progress}%`;
+        } else {
+          progressMeta.textContent = `${payload.stage || "working"} | ${progress}%`;
+        }
+      }
+
+      function renderReviewCard(review) {
+        const rating = review.rating ? `${review.rating}/5` : "No rating";
+        const author = review.author || "Anonymous reviewer";
+        const title = review.title || "Untitled review";
+        const date = review.review_date || "Unknown date";
+        const error = review.llm_error ? `<div class="meta error">${escapeHtml(review.llm_error)}</div>` : "";
+        const reviewBody = review.cleaned_review_text || review.review_text || "";
+        const reviewId = String(review.review_id || `${author}-${date}-${title}`)
+          .replaceAll(/[^a-zA-Z0-9_-]/g, "-")
+          .toLowerCase();
+        const isLong = reviewBody.length > 420;
+
+        return `
+          <article class="review-card">
+            <div class="card-head">
+              <div>
+                <strong>${escapeHtml(title)}</strong>
+                <div class="meta">${escapeHtml(author)} | ${escapeHtml(date)} | ${escapeHtml(rating)}</div>
+              </div>
+            </div>
+            ${error}
+            <div class="raw-review ${isLong ? "collapsed" : ""}" id="review-body-${escapeHtml(reviewId)}">${escapeHtml(reviewBody)}</div>
+            ${isLong ? `<button class="inline-toggle" type="button" data-review-toggle="${escapeHtml(reviewId)}">Read more</button>` : ""}
+          </article>
+        `;
+      }
+
+      function downloadBlob(content, filename, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function reviewsToCsv(rows) {
+        if (!rows.length) return "";
+        const fieldnames = Array.from(
+          rows.reduce((set, row) => {
+            Object.keys(row).forEach((key) => set.add(key));
+            return set;
+          }, new Set())
+        ).sort();
+        const escape = (value) => {
+          const text = String(value ?? "");
+          if (text.includes('"') || text.includes(",") || text.includes("\n")) {
+            return `"${text.replaceAll('"', '""')}"`;
+          }
+          return text;
+        };
+        const lines = [fieldnames.join(",")];
+        for (const row of rows) {
+          lines.push(fieldnames.map((key) => escape(row[key])).join(","));
+        }
+        return lines.join("\n");
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+    </script>
+  </body>
+</html>
