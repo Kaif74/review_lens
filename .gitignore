@@ -2,3 +2,11 @@ __pycache__/
 *.pyc
 output/
 .vercel/
+.env
+.env.*
+!.env.example
+*.env
+venv/
+.venv/
+env/
+ENV/
