@@ -2,6 +2,8 @@
 
 Review Lens is a Flask web app that scrapes reachable customer reviews from product pages, cleans the review text, and produces one overall AI summary for the product using an OpenAI-compatible API.
 
+At the current implementation state, Amazon public product links are the most reliable starting point.
+
 ## Current Behavior
 
 - Accepts a product URL in the browser UI.
@@ -15,6 +17,12 @@ Review Lens is a Flask web app that scrapes reachable customer reviews from prod
   - 3 key points
 - Shows the raw reviews underneath as supporting evidence.
 - Supports JSON and CSV download from the web UI.
+
+## Recommended Usage
+
+- Start with a public Amazon product URL.
+- If Amazon exposes only the public top reviews without login, the app summarizes those reachable reviews.
+- Flipkart and Best Buy remain best-effort because their live markup and anti-bot behavior vary much more between sessions.
 
 ## Important Limits
 
@@ -106,6 +114,8 @@ The app automatically loads variables from a root-level `.env` file.
 4. Run analysis.
 5. Review the overall product summary and the supporting raw reviews.
 
+For the smoothest results, use a public Amazon product link first.
+
 ## Current Output
 
 The UI and API return:
@@ -140,16 +150,19 @@ Each item in `reviews` includes the extracted metadata and cleaned/raw review te
 - Tries the product page first.
 - Can also generate direct `/product-reviews/<ASIN>` candidates.
 - Best effort only for publicly reachable reviews.
+- This is currently the most reliable retailer path in the app.
 
 ### Flipkart
 
 - Supports direct `product-reviews` URLs.
 - Includes parsers for multiple Flipkart review page layouts, including older class-based review blocks and newer buyer-marker layouts.
+- Still best-effort in production because live responses can vary between sessions.
 
 ### Best Buy
 
 - Normalizes multiple Best Buy product URL shapes into canonical public product URLs.
 - Generates direct Best Buy review page candidates.
+- Still best-effort in production because fetch behavior is inconsistent across environments.
 
 ## Hosting
 
@@ -188,12 +201,12 @@ At the current implementation state, the automated test suite covers:
 
 These are useful for local experimentation, but live retailer behavior can change:
 
-- Best Buy:
-  - `https://www.bestbuy.com/site/reviews/apple-airpods-pro-2-wireless-active-noise-cancelling-earbuds-with-hearing-aid-feature-white/6447382`
-- Amazon:
-  - any public product page or public review page that still exposes reviews without login
+- Recommended:
+  - a public Amazon product page that exposes reviews without login
 - Flipkart:
-  - a direct `product-reviews` URL is usually the best starting point
+  - a direct `product-reviews` URL is the best starting point, but still best-effort
+- Best Buy:
+  - supported on a best-effort basis only
 
 ## Secret Handling
 

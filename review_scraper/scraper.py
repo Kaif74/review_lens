@@ -20,6 +20,24 @@ BESTBUY_PRODUCT_ID_RE = re.compile(r"^/product/(?P<slug>.+?)/(?P<product_id>[A-Z
 BESTBUY_SITE_RE = re.compile(r"^/site/(?P<slug>.+?)/(?P<product_id>[A-Za-z0-9]+)(?:\.p)?/?$", re.IGNORECASE)
 AMAZON_ASIN_RE = re.compile(r"/(?:dp|gp/product|product-reviews)/(?P<asin>[A-Z0-9]{10})", re.IGNORECASE)
 FLIPKART_ITEM_RE = re.compile(r"/(?:p|product-reviews)/(?P<item>itm[a-z0-9]+)", re.IGNORECASE)
+FALLBACK_HTTP_STATUSES = {
+    401,
+    403,
+    408,
+    409,
+    425,
+    429,
+    500,
+    502,
+    503,
+    504,
+    520,
+    521,
+    522,
+    523,
+    524,
+    529,
+}
 
 
 class ReviewScraper:
@@ -31,7 +49,7 @@ class ReviewScraper:
             "connect": max(self.config.max_retries, 0),
             "read": max(self.config.max_retries, 0),
             "backoff_factor": 1.0,
-            "status_forcelist": (408, 429, 500, 502, 503, 504),
+            "status_forcelist": tuple(sorted(FALLBACK_HTTP_STATUSES)),
         }
         try:
             retry = Retry(
@@ -70,7 +88,7 @@ class ReviewScraper:
             return self._fetch_with_browser_or_raise(url, exc)
 
         if response.status_code != 200:
-            if response.status_code in {401, 403, 429}:
+            if response.status_code in FALLBACK_HTTP_STATUSES:
                 return self._fetch_with_browser_or_raise(url, f"HTTP {response.status_code}")
             raise ScrapeError(f"Fetch failed for {url}: HTTP {response.status_code}")
 

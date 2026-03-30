@@ -119,6 +119,20 @@ class ScraperTests(unittest.TestCase):
         self.assertEqual(html, "<html>browser ok</html>")
         browser_fetch.assert_called_once()
 
+    def test_fetch_html_uses_browser_fallback_on_http_529(self):
+        scraper = ReviewScraper(ScraperConfig(enable_browser_fallback=True))
+        response = Mock(status_code=529, text="site overloaded")
+
+        with patch.object(scraper.session, "get", return_value=response), patch.object(
+            scraper._browser_fetcher,
+            "fetch_html",
+            return_value="<html>browser ok</html>",
+        ) as browser_fetch:
+            html = scraper.fetch_html("https://example.com/product")
+
+        self.assertEqual(html, "<html>browser ok</html>")
+        browser_fetch.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
