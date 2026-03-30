@@ -1,24 +1,34 @@
 # Review Lens
 
-Review Lens is a Python web application that scrapes customer reviews from an e-commerce product page, cleans and chunks the review text, summarizes each review with an OpenAI-compatible API, and presents the results in a browser UI that can be deployed to Vercel.
+Review Lens is a Flask web app that scrapes reachable customer reviews from product pages, cleans the review text, and produces one overall AI summary for the product using an OpenAI-compatible API.
 
-## What It Does
+## Current Behavior
 
-- Accepts a product page URL in a web form.
-- Follows review links and paginated review pages when they are exposed in HTML.
-- Extracts review text plus metadata such as rating, date, author, and title.
-- Cleans noisy text and chunks long reviews before sending them to an LLM.
-- Uses any OpenAI-compatible chat endpoint for concise summaries and sentiment labels.
-- Lets users download the processed reviews as JSON or CSV from the browser.
-- Includes retry logic, pacing delays, and clear failures for rate limits or anti-bot blocks.
+- Accepts a product URL in the browser UI.
+- Tries retailer-specific review-page resolution for Amazon, Flipkart, and Best Buy before falling back to generic review-link discovery.
+- Uses `requests` first and falls back to Playwright when a site times out or blocks the plain HTTP request.
+- Extracts review text plus metadata such as title, rating, author, and date.
+- Cleans text noise such as trailing `Read more` artifacts.
+- Generates one product-level AI summary:
+  - overall sentiment
+  - overall summary
+  - 3 key points
+- Shows the raw reviews underneath as supporting evidence.
+- Supports JSON and CSV download from the web UI.
+
+## Important Limits
+
+- Amazon may only expose the public reviews visible without login. If Amazon gates deeper review pages behind sign-in, this app cannot legally or reliably bypass that with an unauthenticated session.
+- Big e-commerce sites can change markup or block automation at any time. The scraper is stronger than a generic HTML parser, but no local scraper can guarantee every request from every machine and IP will succeed.
+- The app is optimized for a normal web server process. It is not a great fit for strict serverless limits when Playwright fallback is needed.
 
 ## Stack
 
-- Backend: Flask on Python
-- Scraping: `requests`, `BeautifulSoup`, `urllib3` retry support
+- Backend: Flask
+- Scraping: `requests`, `BeautifulSoup`, `lxml`
+- Browser fallback: Playwright
 - LLM: `openai` Python SDK against OpenAI-compatible APIs
-- Token-aware chunking: `tiktoken` with offline-safe fallback
-- Deployment target: Vercel Python functions
+- Text preprocessing: `tiktoken` with fallback token estimation
 
 ## Project Layout
 
@@ -27,6 +37,7 @@ api/
   index.py
 review_scraper/
   adapters.py
+  browser.py
   exporters.py
   llm.py
   models.py
@@ -37,18 +48,40 @@ review_scraper/
   templates/
     index.html
 tests/
-  fixtures/
   test_pipeline.py
+  test_scraper.py
   test_web.py
-vercel.json
+.env.example
 requirements.txt
+vercel.json
 ```
 
-## Install
+## Setup
+
+1. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 python -m playwright install chromium
+```
+
+2. Create your local environment file:
+
+```bash
+copy .env.example .env
+```
+
+3. Fill in your real values in `.env`.
+
+Example NVIDIA-compatible setup:
+
+```env
+NVIDIA_API_KEY=your_nvidia_api_key_here
+REVIEW_SCRAPER_MODEL=deepseek-ai/deepseek-v3.1
+REVIEW_SCRAPER_BASE_URL=https://integrate.api.nvidia.com/v1
+REVIEW_SCRAPER_API_KEY_ENV=NVIDIA_API_KEY
+REVIEW_SCRAPER_TOKENIZER_MODEL=gpt-4o-mini
+REVIEW_SCRAPER_REQUEST_TIMEOUT=30
 ```
 
 ## Run Locally
@@ -57,62 +90,80 @@ python -m playwright install chromium
 python -m review_scraper
 ```
 
-Then open `http://127.0.0.1:8000`.
+Then open:
 
-If you already have `OPENAI_API_KEY` or `NVIDIA_API_KEY` in a root-level `.env` file, the app now loads it automatically on startup.
+```text
+http://127.0.0.1:8000
+```
 
-If you want to use an OpenAI-compatible provider instead of the default OpenAI environment variable, fill in the `Base URL`, `Model`, and either:
+The app automatically loads variables from a root-level `.env` file.
 
-- set a server env var and leave the API key field empty
-- paste a one-off API key into the form
+## UI Flow
 
-## Example Provider Settings
+1. Paste a product URL.
+2. Choose whether to skip AI summarization.
+3. Optionally raise `Max review pages` or `HTTP timeout`.
+4. Run analysis.
+5. Review the overall product summary and the supporting raw reviews.
 
-For NVIDIA's compatible endpoint:
+## Current Output
 
-- Base URL: `https://integrate.api.nvidia.com/v1`
-- Model: `deepseek-ai/deepseek-v3.1`
-- API key env var: `NVIDIA_API_KEY`
-- extra_body JSON: `{"chat_template_kwargs":{"thinking":true}}`
+The UI and API return:
 
-## Deploy To Vercel
+- `product_name`
+- `review_count`
+- `overall_summary`
+- `overall_sentiment`
+- `overall_key_points`
+- `overall_error`
+- `reviews`
 
-1. Create a new Vercel project from this repository.
-2. Add environment variables such as `OPENAI_API_KEY` or `NVIDIA_API_KEY` in the Vercel project settings.
-3. Deploy as-is. The root route is rewritten to the Python function in `api/index.py`.
+Each item in `reviews` includes the extracted metadata and cleaned/raw review text.
 
-This repo includes:
+## API Endpoints
 
-- `api/index.py` as the Vercel Python entrypoint
-- `vercel.json` to configure rewrites and function behavior
-
-## Chosen Test URL
-
-The interface is prefilled with this public review page:
-
-`https://www.bestbuy.com/site/reviews/apple-airpods-pro-2-wireless-active-noise-cancelling-earbuds-with-hearing-aid-feature-white/6447382`
-
-Retailer markup changes over time, and some sites block automation. If that page stops working, try another public product page that exposes reviews in HTML or JSON-LD.
-
-## API Endpoint
-
-The web UI posts to:
-
+- `GET /`
+  - serves the browser UI
+- `GET /api/health`
+  - simple health check
 - `POST /api/reviews`
+  - synchronous scrape + summarize response
+- `POST /api/reviews/start`
+  - starts a background job
+- `GET /api/reviews/progress/<job_id>`
+  - polls job progress and returns the final result
 
-Expected JSON body fields include:
+## Supported Retailer Logic
 
-- `url`
-- `skip_llm`
-- `model`
-- `base_url`
-- `api_key`
-- `api_key_env`
-- `max_pages`
-- `request_timeout`
-- `extra_body_json`
+### Amazon
 
-The endpoint returns JSON by default and can return CSV when `response_format=csv`.
+- Tries the product page first.
+- Can also generate direct `/product-reviews/<ASIN>` candidates.
+- Best effort only for publicly reachable reviews.
+
+### Flipkart
+
+- Supports direct `product-reviews` URLs.
+- Includes parsers for multiple Flipkart review page layouts, including older class-based review blocks and newer buyer-marker layouts.
+
+### Best Buy
+
+- Normalizes multiple Best Buy product URL shapes into canonical public product URLs.
+- Generates direct Best Buy review page candidates.
+
+## Hosting
+
+Recommended:
+
+- Render
+- Railway
+
+Why:
+
+- this app can make long-running scraping requests
+- Playwright fallback is much easier in a normal web service than in strict serverless runtimes
+
+The repo still contains `api/index.py` and `vercel.json`, but the current implementation is better suited to container-style hosting than to Vercel serverless functions.
 
 ## Verification
 
@@ -123,9 +174,31 @@ python -m unittest discover -s tests -v
 python -m compileall review_scraper tests api
 ```
 
-## Notes
+At the current implementation state, the automated test suite covers:
 
-- Vercel Python functions are still serverless functions, so long scrapes may approach execution limits on very large review sets.
-- Some retailers, especially Amazon, often serve captcha or anti-bot pages. The scraper detects common block signals and returns an error instead of empty results.
-- The app avoids relying on filesystem output during web requests so it remains safe for ephemeral deployments.
-- The backend uses a simple `requests` fetch first and falls back to a minimal Playwright browser fetch when the site times out or blocks the HTTP request.
+- JSON-LD extraction
+- generic heuristic extraction
+- Amazon review-page candidate generation
+- Flipkart review parsing for multiple layouts
+- Best Buy URL normalization and review-page candidate generation
+- progress job behavior
+- NVIDIA default configuration handling
+
+## Example Test URLs
+
+These are useful for local experimentation, but live retailer behavior can change:
+
+- Best Buy:
+  - `https://www.bestbuy.com/site/reviews/apple-airpods-pro-2-wireless-active-noise-cancelling-earbuds-with-hearing-aid-feature-white/6447382`
+- Amazon:
+  - any public product page or public review page that still exposes reviews without login
+- Flipkart:
+  - a direct `product-reviews` URL is usually the best starting point
+
+## Secret Handling
+
+- Keep real secrets in `.env`
+- Commit `.env.example`
+- `.env` is ignored by `.gitignore`
+
+If a real `.env` was ever pushed, rotate the exposed key before recreating a remote repository.
