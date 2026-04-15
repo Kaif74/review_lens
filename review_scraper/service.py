@@ -52,7 +52,7 @@ class PipelineResult:
 ProgressCallback = Callable[[dict[str, Any]], None]
 
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
-NVIDIA_DEFAULT_MODEL = "deepseek-ai/deepseek-v3.1"
+NVIDIA_DEFAULT_MODEL = "deepseek-ai/deepseek-v3.2"
 NVIDIA_DEPRECATED_MODEL_ALIASES = {
     "deepseek-ai/deepseek-r1",
 }
